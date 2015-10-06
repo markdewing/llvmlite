@@ -198,6 +198,10 @@ LLVMPY_CreateTargetMachine(LLVMTargetRef T,
     opt.JITEmitDebugInfo = EmitJITDebug;
     opt.PrintMachineCode = PrintMC;
 
+    // Keep the frame pointer in JIT-ed code, so traces can be collected
+    // for LLVM 3.6, need another way for 3.7
+    opt.NoFramePointerElim = 1;
+
     return wrap(unwrap(T)->createTargetMachine(Triple, CPU, Features, opt,
                                                rm, cm, cgol));
 }
