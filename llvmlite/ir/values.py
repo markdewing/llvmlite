@@ -273,6 +273,15 @@ class NamedMetaData(object):
     def add(self, md):
         self.operands.append(md)
 
+class MDSelfValue(NamedValue):
+    name_prefix = '!'
+    def __init__(self, parent, name):
+        super(MDSelfValue, self).__init__(parent, types.MetaData(), name=name)
+        self.pname = name
+
+    def _get_reference(self):
+        return self.name_prefix + str(self.pname)
+
 
 class MDValue(NamedValue):
     name_prefix = '!'

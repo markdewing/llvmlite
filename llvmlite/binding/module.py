@@ -205,6 +205,15 @@ class _FunctionsIterator(_Iterator):
     def _next(self):
         return ffi.lib.LLVMPY_FunctionsIterNext(self)
 
+def enable_diagnostic_handler():
+    ffi.lib.LLVMPY_EnableDiagnosticHandler()
+
+def enable_debug_output():
+    ffi.lib.LLVMPY_SetDebugFlag()
+
+def init_vectorization():
+    ffi.lib.LLVMPY_InitializeVectorization()
+
 
 # =============================================================================
 # Set function FFI

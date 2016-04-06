@@ -10,6 +10,10 @@
 
 #include <cstdio>
 
+#ifdef __linux__
+#include <unistd.h>
+#endif
+
 
 extern "C" {
 
@@ -144,9 +148,62 @@ LLVMPY_TryAllocateExecutableMemory(void)
     return ec.value();
 }
 
+#ifdef __linux__
+// Output JIT events in a perf-compatible format
+class PerfJITEventListener: public llvm::JITEventListener
+{
+public:
+    PerfJITEventListener()
+    {
+        pid_t pid = getpid();
+        char fname[50];
+        sprintf(fname, "/tmp/perf-%d.map", pid);
+        printf("Creating map file %s\n",fname);
+        map_file = fopen(fname, "w");
+
+    }
+
+    virtual ~PerfJITEventListener()
+    {
+        fclose(map_file);
+    }
+
+    virtual void NotifyObjectEmitted(const llvm::object::ObjectFile &Obj,
+                                     const llvm::RuntimeDyld::LoadedObjectInfo &L)
+    {
+        llvm::object::OwningBinary<llvm::object::ObjectFile> DebugObjOwner = L.getObjectForDebug(Obj);
+        const llvm::object::ObjectFile &DebugObj = *DebugObjOwner.getBinary();
+
+        for (llvm::object::symbol_iterator I = DebugObj.symbol_begin(), E = DebugObj.symbol_end(); I != E; ++I) {
+            //if (I->getType(SymType)) continue;
+            llvm::object::SymbolRef::Type SymType = I->getType();
+            if (SymType == llvm::object::SymbolRef::ST_Function) {
+                llvm::ErrorOr<uint64_t> Addr = I->getAddress();
+                uint64_t Size = I->getCommonSize();
+                llvm::ErrorOr<llvm::StringRef> Name = I->getName();
+
+                if (Name && Addr) {
+                    fprintf(map_file, "%lx %lx %s\n", *Addr, Size, Name->data());
+                    printf("%lx %lx %s\n", *Addr, Size, Name->data());
+                }
+            }
+        }
+
+    }
+
+    virtual void NotifyFreeingObject(const llvm::object::ObjectFile &Obj) {}
+
+private:
+    FILE *map_file;
+};
+
+PerfJITEventListener *globalPerfEventListener = NULL;
+#endif
+
 API_EXPORT(bool)
 LLVMPY_EnableJITEvents(LLVMExecutionEngineRef EE)
 {
+#if 0
 #ifdef __linux__
     llvm::JITEventListener *listener = llvm::JITEventListener::createOProfileJITEventListener();
     // if listener is null, then LLVM was not compiled for OProfile JIT events.
@@ -154,6 +211,16 @@ LLVMPY_EnableJITEvents(LLVMExecutionEngineRef EE)
         llvm::unwrap(EE)->RegisterJITEventListener(listener);
         return true;
     }
+#endif
+#endif
+#ifdef __linux__
+    if (!globalPerfEventListener)
+        globalPerfEventListener = new PerfJITEventListener();
+
+    //PerfJITEventListener *perf_listener = new PerfJITEventListener();
+    //llvm::unwrap(EE)->RegisterJITEventListener(perf_listener);
+    llvm::unwrap(EE)->RegisterJITEventListener(globalPerfEventListener);
+    return true;
 #endif
     return false;
 }

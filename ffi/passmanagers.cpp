@@ -1,4 +1,5 @@
 #include "core.h"
+#include "llvm-c/Target.h"
 
 
 extern "C" {
@@ -47,5 +48,13 @@ LLVMPY_FinalizeFunctionPassManager(LLVMPassManagerRef FPM)
 {
     return LLVMFinalizeFunctionPassManager(FPM);
 }
+
+API_EXPORT(void)
+LLVMPY_AddTargetLibraryInfo(LLVMPassManagerRef PM, LLVMTargetLibraryInfoRef TLI)
+{
+    LLVMAddTargetLibraryInfo(TLI, PM);
+}
+
+
 
 } // end extern "C"

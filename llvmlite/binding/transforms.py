@@ -106,6 +106,10 @@ class PassManagerBuilder(ffi.ObjectRef):
         else:
             raise TypeError(pm)
 
+    def add_library_info(self, tli):
+        ffi.lib.LLVMPY_PassManagerBuilderSetLibraryInfo(self, tli)
+
+
     def _dispose(self):
         self._capi.LLVMPY_PassManagerBuilderDispose(self)
 

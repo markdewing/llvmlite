@@ -5,6 +5,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/IR/Type.h"
@@ -21,6 +22,15 @@ inline LLVMTargetLibraryInfoRef wrap(TargetLibraryInfo *TLI) {
     return reinterpret_cast<LLVMTargetLibraryInfoRef>(TLI);
 }
 
+inline LLVMTargetLibraryInfoRef wrap(llvm::TargetLibraryInfoImpl *TLII) {
+  return reinterpret_cast<LLVMTargetLibraryInfoRef>(TLII);
+}
+
+inline llvm::TargetLibraryInfoImpl *unwrap_impl(LLVMTargetLibraryInfoRef TLI) {
+  return reinterpret_cast<llvm::TargetLibraryInfoImpl*>(TLI);
+}
+
+
 inline TargetLibraryInfo *unwrap(LLVMTargetLibraryInfoRef TLI) {
     return reinterpret_cast<TargetLibraryInfo*>(TLI);
 }
@@ -31,6 +41,10 @@ inline Target *unwrap(LLVMTargetRef T) {
 
 inline LLVMTargetMachineRef wrap(TargetMachine *TM) {
     return reinterpret_cast<LLVMTargetMachineRef>(TM);
+}
+
+inline TargetMachine *unwrap(LLVMTargetMachineRef TM) {
+    return reinterpret_cast<TargetMachine*>(TM);
 }
 
 }
@@ -301,16 +315,38 @@ LLVMPY_DisposeMemoryBuffer(LLVMMemoryBufferRef MB)
     return LLVMDisposeMemoryBuffer(MB);
 }
 
-/*
-
-If needed:
-
-explicit TargetLibraryInfoWrapperPass(const Triple &T);
-
-void LLVMAddTargetLibraryInfo(LLVMTargetLibraryInfoRef TLI,
-                              LLVMPassManagerRef PM) {
-  unwrap(PM)->add(new TargetLibraryInfoWrapperPass(*unwrap(TLI)));
+API_EXPORT(LLVMTargetLibraryInfoRef)
+LLVMPY_CreateTargetLibraryInfo()
+{
+    llvm::Triple T(llvm::sys::getDefaultTargetTriple());
+    llvm::TargetLibraryInfoImpl *TLII = new llvm::TargetLibraryInfoImpl(T);
+    TLII->addVectorizableFunctionsFromVecLib(llvm::TargetLibraryInfoImpl::SLEEF, true);
+    return llvm::wrap(TLII);
+   
 }
-*/
+
+//explicit TargetLibraryInfoWrapperPass(const llvm::TargetLibraryInfoImpl &T);
+
+API_EXPORT(void) LLVMPY_AddTargetLibraryWrapperInfo(LLVMTargetLibraryInfoRef TLI,
+                              LLVMPassManagerRef PM) {
+  llvm::unwrap(PM)->add(new llvm::TargetLibraryInfoWrapperPass(*llvm::unwrap_impl(TLI)));
+}
+
+API_EXPORT(void) LLVMPY_AddTargetTransformInfoWrapper(LLVMTargetMachineRef TM,
+                              LLVMPassManagerRef PM) {
+    
+ llvm::TargetIRAnalysis TIRA =  llvm::unwrap(TM)->getTargetIRAnalysis(); 
+ llvm::unwrap(PM)->add(llvm::createTargetTransformInfoWrapperPass(TIRA));
+}
+
+API_EXPORT(void)
+LLVMPY_CreateAndAddTargetLibraryInfo(LLVMPassManagerRef PM)
+{
+    llvm::Triple T(llvm::sys::getDefaultTargetTriple());
+    llvm::TargetLibraryInfoImpl *TLII = new llvm::TargetLibraryInfoImpl(T);
+    TLII->addVectorizableFunctionsFromVecLib(llvm::TargetLibraryInfoImpl::SLEEF, true);
+    llvm::unwrap(PM)->add(new llvm::TargetLibraryInfoWrapperPass(*TLII));
+   
+}
 
 } // end extern "C"

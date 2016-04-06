@@ -14,6 +14,11 @@ namespace llvm {
     inline LLVMPassManagerBuilderRef wrap(PassManagerBuilder *P) {
         return reinterpret_cast<LLVMPassManagerBuilderRef>(P);
     }
+
+inline llvm::TargetLibraryInfoImpl *unwrap_impl(LLVMTargetLibraryInfoRef TLI) {
+  return reinterpret_cast<llvm::TargetLibraryInfoImpl*>(TLI);
+}
+
 }
 
 
@@ -138,6 +143,14 @@ LLVMPY_PassManagerBuilderGetSLPVectorize(LLVMPassManagerBuilderRef PMB)
 {
     llvm::PassManagerBuilder *pmb = llvm::unwrap(PMB);
     return pmb->SLPVectorize;
+}
+
+
+API_EXPORT(void)
+LLVMPY_PassManagerBuilderSetLibraryInfo(LLVMPassManagerBuilderRef PMB, LLVMTargetLibraryInfoRef TLI)
+{
+    llvm::PassManagerBuilder *pmb = llvm::unwrap(PMB);
+    pmb->LibraryInfo = llvm::unwrap_impl(TLI);
 }
 
 

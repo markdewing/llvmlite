@@ -295,6 +295,31 @@ class TargetMachine(ffi.ObjectRef):
             ffi.lib.LLVMPY_GetTargetMachineTriple(self, out)
             return str(out)
 
+class TargetLibraryInfo(ffi.ObjectRef):
+    def __init__(self, ptr=None):
+        ptr = ffi.lib.LLVMPY_CreateTargetLibraryInfo()
+        ffi.ObjectRef.__init__(self, ptr)
+
+    def add_pass(self, pm):
+        """
+        Add a TargetLibraryInfo to PassManager *pm*.
+        """
+        #ffi.lib.LLVMPY_AddTargetLibraryInfo(pm, self)
+        # Once added to a PassManager, we can never get it back.
+        ffi.lib.LLVMPY_AddTargetLibraryWrapperInfo(self, pm)
+        self._owned = True
+
+def create_target_library_info():
+    return TargetLibraryInfo(ffi.lib.LLVMPY_CreateTargetLibraryInfo())
+
+def create_and_add_target_library_info(pm):
+    ffi.lib.LLVMPY_CreateAndAddTargetLibraryInfo(pm)
+
+def add_target_transform_info(tm, pm):
+    ffi.lib.LLVMPY_AddTargetTransformInfoWrapper(tm, pm)
+
+
+
 
 # ============================================================================
 # FFI
@@ -393,3 +418,18 @@ ffi.lib.LLVMPY_GetTargetMachineData.argtypes = [
     ffi.LLVMTargetMachineRef,
 ]
 ffi.lib.LLVMPY_GetTargetMachineData.restype = ffi.LLVMTargetDataRef
+
+ffi.lib.LLVMPY_CreateTargetLibraryInfo.restype = ffi.LLVMTargetLibraryInfoRef
+
+ffi.lib.LLVMPY_AddTargetLibraryInfo.argtypes = [ffi.LLVMPassManagerRef,
+                                                ffi.LLVMTargetLibraryInfoRef]
+
+ffi.lib.LLVMPY_AddTargetLibraryWrapperInfo.argtypes = [ffi.LLVMTargetLibraryInfoRef,
+                                                       ffi.LLVMPassManagerRef]
+
+ffi.lib.LLVMPY_CreateAndAddTargetLibraryInfo.argtypes = [ffi.LLVMPassManagerRef]
+
+ffi.lib.LLVMPY_AddTargetTransformInfoWrapper.argtypes = [ffi.LLVMTargetMachineRef,
+                                                       ffi.LLVMPassManagerRef]
+
+
